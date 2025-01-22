@@ -4,49 +4,26 @@ import (
 	"context"
 	"path/filepath"
 	"testing"
+
+	"github.com/styrainc/regal/internal/test/assert"
 )
 
-func TestLookupFromFile(t *testing.T) {
+func TestCanLookupCapabilitiesFromFile(t *testing.T) {
 	t.Parallel()
 
-	// Test that we are able to load a capabilities file using a file://
-	// URL.
+	path := assert.Do(filepath.Abs("./testdata/capabilities.json")).Or(t, "no absolute path for capabilities file")
+	caps := assert.Do(Lookup(context.TODO(), "file://"+path)).Or(t, "unexpected error from Lookup")
 
-	path, err := filepath.Abs("./testdata/capabilities.json")
-	if err != nil {
-		t.Fatalf("could not determine absolute path to test capabilities file: %v", err)
-	}
-
-	urlForPath := "file://" + path
-
-	caps, err := Lookup(context.Background(), urlForPath)
-	if err != nil {
-		t.Errorf("unexpected error from Lookup: %v", err)
-	}
-
-	if len(caps.Builtins) != 1 {
-		t.Errorf("expected capabilities to have exactly 1 builtin")
-	}
-
-	if caps.Builtins[0].Name != "unittest123" {
-		t.Errorf("builtin name is incorrect, expected 'unittest123' but got '%s'", caps.Builtins[0].Name)
-	}
+	assert.Equal(t, 1, len(caps.Builtins), "expected capabilities to have exactly 1 builtin")
+	assert.Equal(t, "unittest123", caps.Builtins[0].Name, "builtin name is incorrect")
 }
 
-func TestLookupFromEmbedded(t *testing.T) {
+func TestCanLookupCapabilitiesFromEmbedded(t *testing.T) {
 	t.Parallel()
 
-	// Test that we can load a one of the existing OPA capabilities files
-	// via the embedded database.
+	caps := assert.Do(Lookup(context.TODO(), "regal:///capabilities/opa/v0.55.0")).Or(t, "unexpected error from Lookup")
 
-	caps, err := Lookup(context.Background(), "regal:///capabilities/opa/v0.55.0")
-	if err != nil {
-		t.Errorf("unexpected error from Lookup: %v", err)
-	}
-
-	if len(caps.Builtins) != 193 {
-		t.Errorf("OPA v0.55.0 capabilities should have 193 builtins, not %d", len(caps.Builtins))
-	}
+	assert.Equal(t, 193, len(caps.Builtins), "OPA v0.55.0 capabilities should have 193 builtins")
 }
 
 func TestSemverSort(t *testing.T) {
@@ -74,12 +51,8 @@ func TestSemverSort(t *testing.T) {
 		},
 	}
 
-	for i, c := range cases {
-		t.Logf("----- TestSemverSort[%d]", i)
-		t.Logf("// %s\n", c.note)
-
-		// Note that this actually sorts the input in-place, which is
-		// fine since we won't re-visit the same test case twice.
+	for _, c := range cases {
+		// Sorts the input in-place, which works since we won't re-visit the same test twice.
 		semverSort(c.input)
 
 		for j, x := range c.expect {

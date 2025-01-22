@@ -6,25 +6,18 @@ package capabilities
 import (
 	"context"
 	"testing"
+
+	"github.com/styrainc/regal/internal/test/assert"
 )
 
-// Since this test requires internet access, we hide it behind a flag.
-
-func TestLookupFromURL(t *testing.T) {
+func TestCanLookupCapabilitiesFromURL(t *testing.T) {
 	t.Parallel()
 
-	// Test that we can load a one of the existing OPA capabilities files
-	// via GitHub.
+	cURL := "https://raw.githubusercontent.com/open-policy-agent/opa/main/capabilities/v0.55.0.json"
+	caps := assert.
+		Do(Lookup(context.TODO(), cURL)).
+		Or(t, "unexpected error from Lookup")
 
-	caps, err := Lookup(
-		context.Background(),
-		"https://raw.githubusercontent.com/open-policy-agent/opa/main/capabilities/v0.55.0.json",
-	)
-	if err != nil {
-		t.Errorf("unexpected error from Lookup: %v", err)
-	}
+	assert.Equal(t, 193, len(caps.Builtins), "OPA v0.55.0 capabilities should have 193 builtins")
 
-	if len(caps.Builtins) != 193 {
-		t.Errorf("OPA v0.55.0 capabilities should have 193 builtins, not %d", len(caps.Builtins))
-	}
 }
